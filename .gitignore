@@ -86,3 +86,6 @@ USER.md
 !.agent/workflows/
 /local/
 package-lock.json
+docker-compose.yml
+docker/piper-data/en_US-amy-medium.onnx
+docker/piper-data/en_US-amy-medium.onnx.json
