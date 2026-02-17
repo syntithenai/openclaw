@@ -1,0 +1,153 @@
+FROM node:22-bookworm
+
+# Install Bun (required for build scripts)
+RUN curl -fsSL https://bun.sh/install | bash
+ENV PATH="/root/.bun/bin:${PATH}"
+
+RUN corepack enable
+
+WORKDIR /app
+
+# Default runtime deps for Playwright's bundled Chromium.
+ARG OPENCLAW_DOCKER_APT_PACKAGES="libnspr4 libnss3"
+RUN if [ -n "$OPENCLAW_DOCKER_APT_PACKAGES" ]; then \
+  apt-get update && \
+  DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends $OPENCLAW_DOCKER_APT_PACKAGES && \
+  apt-get clean && \
+  rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*; \
+  fi
+
+# Install gog CLI (Google Workspace CLI for Gmail, Calendar, Drive, etc.)
+RUN apt-get update && \
+  DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+  curl ca-certificates && \
+  apt-get clean && \
+  rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/* && \
+  LATEST_TAG=$(curl -s https://api.github.com/repos/steipete/gogcli/releases/latest | grep -o '"tag_name": "[^"]*' | cut -d'"' -f4) && \
+  if [ -n "$LATEST_TAG" ]; then \
+  DOWNLOAD_URL="https://github.com/steipete/gogcli/releases/download/${LATEST_TAG}/gogcli_${LATEST_TAG#v}_linux_amd64.tar.gz" && \
+  curl -L "$DOWNLOAD_URL" -o /tmp/gog.tar.gz 2>&1 && \
+  cd /tmp && \
+  tar -xzf gog.tar.gz && \
+  if [ -f "gog" ]; then \
+  chmod +x gog && \
+  mv gog /usr/local/bin/gog && \
+  rm -f /tmp/gog.tar.gz; \
+  else \
+  echo "Warning: Could not extract gog binary from archive"; \
+  fi; \
+  else \
+  echo "Warning: Could not determine latest gog version"; \
+  fi
+
+# Install gcloud CLI (required for Gmail Pub/Sub setup)
+ARG OPENCLAW_INSTALL_GCLOUD="false"
+RUN if [ "$OPENCLAW_INSTALL_GCLOUD" = "true" ]; then \
+  apt-get update && \
+  DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+  ca-certificates curl gnupg apt-transport-https && \
+  mkdir -p /usr/share/keyrings && \
+  curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg \
+  | gpg --dearmor -o /usr/share/keyrings/cloud.google.gpg && \
+  echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" \
+  > /etc/apt/sources.list.d/google-cloud-sdk.list && \
+  apt-get update && \
+  DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends google-cloud-cli && \
+  apt-get clean && \
+  rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*; \
+  fi
+
+# Install ffmpeg + PulseAudio utilities for talk mode.
+# Whisper CLI is optional to avoid heavy torch downloads during image rebuilds.
+ARG OPENCLAW_INSTALL_WHISPER_CLI="false"
+RUN apt-get update && \
+  DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+  ffmpeg python3 python3-venv pulseaudio-utils && \
+  if [ "$OPENCLAW_INSTALL_WHISPER_CLI" = "true" ]; then \
+    python3 -m venv /opt/whisper-venv && \
+    /opt/whisper-venv/bin/pip install --no-cache-dir --disable-pip-version-check openai-whisper && \
+    ln -s /opt/whisper-venv/bin/whisper /usr/local/bin/whisper; \
+  fi && \
+  apt-get clean && \
+  rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*
+
+ENV PATH="/opt/whisper-venv/bin:${PATH}"
+
+
+# Bun
+RUN curl -fsSL https://bun.sh/install | bash
+ENV PATH="/root/.bun/bin:${PATH}"
+
+# Brew prerequisites (root)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      build-essential ca-certificates curl file git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Prepare Homebrew prefix with correct ownership (root)
+RUN mkdir -p /home/linuxbrew/.linuxbrew \
+ && chown -R node:node /home/linuxbrew
+
+# Install Homebrew as non-root (node)
+USER node
+RUN NONINTERACTIVE=1 /bin/bash -lc \
+  "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+# Persist brew on PATH for later layers
+ENV PATH="/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin:${PATH}"
+
+# Back to root if you need apt / permissions later
+USER root
+
+
+RUN corepack enable
+
+WORKDIR /app
+
+ARG CLAWDBOT_DOCKER_APT_PACKAGES=""
+RUN if [ -n "$CLAWDBOT_DOCKER_APT_PACKAGES" ]; then \
+      apt-get update && \
+      DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends $CLAWDBOT_DOCKER_APT_PACKAGES && \
+      apt-get clean && \
+      rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*; \
+    fi
+
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+COPY ui/package.json ./ui/package.json
+COPY patches ./patches
+COPY scripts ./scripts
+
+RUN pnpm install --frozen-lockfile
+
+COPY . .
+RUN OPENCLAW_A2UI_SKIP_MISSING=1 pnpm build
+# Force pnpm for UI build (Bun may fail on ARM/Synology architectures)
+ENV OPENCLAW_PREFER_PNPM=1
+RUN pnpm ui:build
+
+ENV NODE_ENV=production
+RUN apt-get update && \
+  DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+  gh yt-dlp ffmpeg poppler-utils && \
+  apt-get clean && \
+  rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*
+
+
+# Allow non-root user to write temp files during runtime/tests.
+RUN chown -R node:node /app
+
+# Add node user to audio group for PulseAudio access
+RUN usermod -a -G audio node
+
+# Security hardening: Run as non-root user
+# The node:22-bookworm image includes a 'node' user (uid 1000)
+# This reduces the attack surface by preventing container escape via root privileges
+USER node
+
+# Start gateway server with default config.
+# Binds to loopback (127.0.0.1) by default for security.
+#
+# For container platforms requiring external health checks:
+#   1. Set OPENCLAW_GATEWAY_TOKEN or OPENCLAW_GATEWAY_PASSWORD env var
+#   2. Override CMD: ["node","openclaw.mjs","gateway","--allow-unconfigured","--bind","lan"]
+CMD ["node", "openclaw.mjs", "gateway", "--allow-unconfigured"]
