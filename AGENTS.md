@@ -65,6 +65,7 @@
 - Format check: `pnpm format` (oxfmt --check)
 - Format fix: `pnpm format:fix` (oxfmt --write)
 - Tests: `pnpm test` (vitest); coverage: `pnpm test:coverage`
+- **Dockerized gateway changes:** after code changes that affect the gateway runtime, **always** rebuild the Docker image and restart the gateway container (use `Dockerfile.linux.full`).
 
 ## Coding Style & Naming Conventions
 
