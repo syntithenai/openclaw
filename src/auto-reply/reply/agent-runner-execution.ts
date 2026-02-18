@@ -292,6 +292,7 @@ export async function runAgentTurnWithFallback(params: {
             verboseLevel: params.followupRun.run.verboseLevel,
             reasoningLevel: params.followupRun.run.reasoningLevel,
             execOverrides: params.followupRun.run.execOverrides,
+            disableTtsTool: params.sessionCtx.DisableTtsTool ?? false,
             toolResultFormat: (() => {
               const channel = resolveMessageChannel(
                 params.sessionCtx.Surface,

@@ -7,6 +7,7 @@ import {
   validateTalkConfigParams,
   validateTalkModeParams,
 } from "../protocol/index.js";
+import { hasLinuxTalkRuntime, setLinuxTalkMode } from "../../talk/linux/gateway-integration.js";
 import type { GatewayRequestHandlers } from "./types.js";
 
 const ADMIN_SCOPE = "operator.admin";
@@ -23,6 +24,9 @@ function normalizeTalkConfigSection(value: unknown): Record<string, unknown> | u
   }
   const source = value as Record<string, unknown>;
   const talk: Record<string, unknown> = {};
+  if (typeof source.autoStart === "boolean") {
+    talk.autoStart = source.autoStart;
+  }
   if (typeof source.voiceId === "string") {
     talk.voiceId = source.voiceId;
   }
@@ -66,14 +70,32 @@ function normalizeTalkConfigSection(value: unknown): Record<string, unknown> | u
   if (typeof source.ttsProvider === "string") {
     talk.ttsProvider = source.ttsProvider;
   }
+  if (typeof source.ttsVoice === "string") {
+    talk.ttsVoice = source.ttsVoice;
+  }
   if (typeof source.ttsEndpoint === "string") {
     talk.ttsEndpoint = source.ttsEndpoint;
   }
   if (typeof source.ttsTimeoutMs === "number") {
     talk.ttsTimeoutMs = source.ttsTimeoutMs;
   }
+  if (typeof source.captureBackend === "string") {
+    talk.captureBackend = source.captureBackend;
+  }
   if (typeof source.audioDevice === "string") {
     talk.audioDevice = source.audioDevice;
+  }
+  if (typeof source.voiceWakeEnabled === "boolean") {
+    talk.voiceWakeEnabled = source.voiceWakeEnabled;
+  }
+  if (typeof source.voiceWakeWords === "string") {
+    talk.voiceWakeWords = source.voiceWakeWords;
+  }
+  if (typeof source.voiceWakeConfidence === "number") {
+    talk.voiceWakeConfidence = source.voiceWakeConfidence;
+  }
+  if (typeof source.voiceWakePhraseTimeoutMs === "number") {
+    talk.voiceWakePhraseTimeoutMs = source.voiceWakePhraseTimeoutMs;
   }
   return Object.keys(talk).length > 0 ? talk : undefined;
 }
@@ -125,8 +147,13 @@ export const talkHandlers: GatewayRequestHandlers = {
 
     respond(true, { config: configPayload }, undefined);
   },
-  "talk.mode": ({ params, respond, context, client, isWebchatConnect }) => {
-    if (client && isWebchatConnect(client.connect) && !context.hasConnectedMobileNode()) {
+  "talk.mode": async ({ params, respond, context, client, isWebchatConnect }) => {
+    if (
+      client &&
+      isWebchatConnect(client.connect) &&
+      !context.hasConnectedMobileNode() &&
+      !hasLinuxTalkRuntime()
+    ) {
       respond(
         false,
         undefined,
@@ -150,6 +177,17 @@ export const talkHandlers: GatewayRequestHandlers = {
       phase: (params as { phase?: string }).phase ?? null,
       ts: Date.now(),
     };
+    if (hasLinuxTalkRuntime()) {
+      const result = await setLinuxTalkMode(payload.enabled);
+      if (!result.ok) {
+        respond(
+          false,
+          undefined,
+          errorShape(ErrorCodes.UNAVAILABLE, result.error ?? "talk runtime unavailable"),
+        );
+        return;
+      }
+    }
     context.broadcast("talk.mode", payload, { dropIfSlow: true });
     respond(true, payload, undefined);
   },

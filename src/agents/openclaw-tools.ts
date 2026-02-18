@@ -61,6 +61,8 @@ export function createOpenClawTools(options?: {
   requireExplicitMessageTarget?: boolean;
   /** If true, omit the message tool from the tool list. */
   disableMessageTool?: boolean;
+  /** If true, omit the TTS tool from the tool list (for talk mode). */
+  disableTtsTool?: boolean;
 }): AnyAgentTool[] {
   const workspaceDir = resolveWorkspaceRoot(options?.workspaceDir);
   const imageTool = options?.agentDir?.trim()
@@ -111,10 +113,14 @@ export function createOpenClawTools(options?: {
       agentSessionKey: options?.agentSessionKey,
     }),
     ...(messageTool ? [messageTool] : []),
-    createTtsTool({
-      agentChannel: options?.agentChannel,
-      config: options?.config,
-    }),
+    ...(options?.disableTtsTool
+      ? []
+      : [
+          createTtsTool({
+            agentChannel: options?.agentChannel,
+            config: options?.config,
+          }),
+        ]),
     createGatewayTool({
       agentSessionKey: options?.agentSessionKey,
       config: options?.config,

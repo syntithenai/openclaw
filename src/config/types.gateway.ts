@@ -47,6 +47,8 @@ export type CanvasHostConfig = {
 };
 
 export type TalkConfig = {
+  /** Auto-enable Linux talk mode on startup. */
+  autoStart?: boolean;
   /** Default ElevenLabs voice ID for Talk mode. */
   voiceId?: string;
   /** Optional voice name -> ElevenLabs voice ID map. */
@@ -67,12 +69,24 @@ export type TalkConfig = {
   sttLanguage?: string;
   /** TTS provider name (Linux). */
   ttsProvider?: string;
+  /** TTS voice or speaker name (Linux). */
+  ttsVoice?: string;
   /** TTS HTTP endpoint (Linux). */
   ttsEndpoint?: string;
   /** TTS request timeout in ms (Linux). */
   ttsTimeoutMs?: number;
+  /** Audio capture backend (Linux). */
+  captureBackend?: "pulseaudio" | "pipewire";
   /** Input audio device identifier (Linux). */
   audioDevice?: string;
+  /** Enable voice wake mode - continuously listen for wake words even when talk mode is off. */
+  voiceWakeEnabled?: boolean;
+  /** Wake words to trigger talk mode (space-separated sequence, case-insensitive). */
+  voiceWakeWords?: string;
+  /** Min confidence for wake word detection (0.0-1.0, default: 0.5). */
+  voiceWakeConfidence?: number;
+  /** Timeout in ms to wait for complete wake phrase (default: 5000). */
+  voiceWakePhraseTimeoutMs?: number;
 };
 
 export type GatewayControlUiConfig = {

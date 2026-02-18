@@ -141,6 +141,10 @@ export type MsgContext = {
    * Used for hook confirmation messages like "Session context saved to memory".
    */
   HookMessages?: string[];
+  /**
+   * If true, disable the TTS tool from the tool list (used in talk mode).
+   */
+  DisableTtsTool?: boolean;
 };
 
 export type FinalizedMsgContext = Omit<MsgContext, "CommandAuthorized"> & {

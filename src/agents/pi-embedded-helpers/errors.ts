@@ -103,6 +103,10 @@ export function isCompactionFailureError(errorMessage?: string): boolean {
 const ERROR_PAYLOAD_PREFIX_RE =
   /^(?:error|api\s*error|apierror|openai\s*error|anthropic\s*error|gateway\s*error)[:\s-]+/i;
 const FINAL_TAG_RE = /<\s*\/?\s*final\s*>/gi;
+const CONTROL_CHANNEL_FINAL_RE = /<\|\s*channel\s*\|>\s*final\s*/gi;
+const CONTROL_TOKEN_RE = /<\|\s*(?:constrain|message|channel)\s*\|>/gi;
+const SINGLE_BRACKET_DIRECTIVE_RE =
+  /\[\s*(?:reply_to_current|reply_to\s*:\s*[^\]\n]+|audio_as_voice)\s*\]/gi;
 const ERROR_PREFIX_RE =
   /^(?:error|api\s*error|openai\s*error|anthropic\s*error|gateway\s*error|request failed|failed|exception)[:\s-]+/i;
 const CONTEXT_OVERFLOW_ERROR_HEAD_RE =
@@ -181,6 +185,16 @@ function stripFinalTagsFromText(text: string): string {
     return text;
   }
   return text.replace(FINAL_TAG_RE, "");
+}
+
+function stripControlTokensFromText(text: string): string {
+  if (!text) {
+    return text;
+  }
+  return text
+    .replace(CONTROL_CHANNEL_FINAL_RE, "")
+    .replace(CONTROL_TOKEN_RE, "")
+    .replace(SINGLE_BRACKET_DIRECTIVE_RE, " ");
 }
 
 function collapseConsecutiveDuplicateBlocks(text: string): string {
@@ -518,7 +532,7 @@ export function sanitizeUserFacingText(text: string, opts?: { errorContext?: boo
     return text;
   }
   const errorContext = opts?.errorContext ?? false;
-  const stripped = stripFinalTagsFromText(text);
+  const stripped = stripFinalTagsFromText(stripControlTokensFromText(text));
   const trimmed = stripped.trim();
   if (!trimmed) {
     return "";

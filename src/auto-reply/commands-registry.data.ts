@@ -265,6 +265,30 @@ function buildChatCommands(): ChatCommandDefinition[] {
       },
     }),
     defineChatCommand({
+      key: "talk",
+      nativeName: "talk",
+      description: "Toggle Linux talk mode (host audio required).",
+      textAlias: "/talk",
+      category: "media",
+      args: [
+        {
+          name: "action",
+          description: "on, off, status, or help",
+          type: "string",
+          choices: ["on", "off", "status", "help"],
+        },
+      ],
+      argsMenu: {
+        arg: "action",
+        title:
+          "Talk Mode Actions:\n" +
+          "• On – Enable Linux talk mode\n" +
+          "• Off – Disable Linux talk mode\n" +
+          "• Status – Show talk mode status\n" +
+          "• Help – Show usage guide",
+      },
+    }),
+    defineChatCommand({
       key: "whoami",
       nativeName: "whoami",
       description: "Show your sender id.",

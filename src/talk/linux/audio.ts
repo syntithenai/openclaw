@@ -4,15 +4,21 @@ export async function* captureAudio(
   signal: AbortSignal,
   opts?: {
     device?: string;
+    backend?: "pulseaudio" | "pipewire";
     onError?: (err: unknown) => void;
     onExit?: (code: number | null, signal?: NodeJS.Signals | null) => void;
   },
 ) {
-  const args = ["--raw", "--format=s16le", "--rate=16000", "--channels=1"];
-  if (opts?.device) {
+  const backend = opts?.backend ?? "pulseaudio";
+  const usePipewire = backend === "pipewire";
+  const command = usePipewire ? "pw-record" : "parecord";
+  const args = usePipewire
+    ? ["--format", "s16", "--rate", "16000", "--channels", "1", "--raw", "-"]
+    : ["--raw", "--format=s16le", "--rate=16000", "--channels=1"];
+  if (!usePipewire && opts?.device) {
     args.push("--device", opts.device);
   }
-  const proc = spawn("parecord", args, { stdio: ["ignore", "pipe", "inherit"] });
+  const proc = spawn(command, args, { stdio: ["ignore", "pipe", "inherit"] });
   proc.on("error", (err) => opts?.onError?.(err));
   proc.on("exit", (code, sig) => opts?.onExit?.(code, sig));
   signal.addEventListener("abort", () => proc.kill("SIGTERM"));

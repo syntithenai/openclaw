@@ -26,6 +26,7 @@ import {
   shouldWakeFromRestartSentinel,
 } from "./server-restart-sentinel.js";
 import { startGatewayMemoryBackend } from "./server-startup-memory.js";
+import { initializeLinuxTalkRuntime } from "../talk/linux/gateway-integration.js";
 
 const SESSION_LOCK_STALE_MS = 30 * 60 * 1000;
 
@@ -147,6 +148,12 @@ export async function startGatewaySidecars(params: {
     params.logChannels.info(
       "skipping channel start (OPENCLAW_SKIP_CHANNELS=1 or OPENCLAW_SKIP_PROVIDERS=1)",
     );
+  }
+
+  try {
+    await initializeLinuxTalkRuntime();
+  } catch (err) {
+    params.log.warn(`talk runtime failed to start: ${String(err)}`);
   }
 
   if (params.cfg.hooks?.internal?.enabled) {

@@ -20,6 +20,8 @@ import {
 import { handleMeshCommand } from "./commands-mesh.js";
 import { handleModelsCommand } from "./commands-models.js";
 import { handlePluginCommand } from "./commands-plugin.js";
+import { handleTalkCommand } from "./commands-talk.js";
+import { handleWakewordCommand } from "./commands-wakeword.js";
 import {
   handleAbortTrigger,
   handleActivationCommand,
@@ -49,6 +51,8 @@ export async function handleCommands(params: HandleCommandsParams): Promise<Comm
       handleSendPolicyCommand,
       handleUsageCommand,
       handleRestartCommand,
+      handleTalkCommand,
+      handleWakewordCommand,
       handleTtsCommands,
       handleHelpCommand,
       handleCommandsListCommand,

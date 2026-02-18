@@ -9,18 +9,25 @@ export async function speakTts(params: {
   endpoint: string;
   timeoutMs?: number;
   signal: AbortSignal;
+  options?: Record<string, unknown>;
   onInterrupted?: (t?: number) => void;
-}): Promise<{ generationMs: number; playbackMs: number; totalMs: number }> {
+}): Promise<{ generationMs: number; playbackMs: number; totalMs: number; audioPath: string }> {
   const tmpWav = path.join("/tmp", `talk-${Date.now()}.wav`);
   const ttsStart = Date.now();
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), params.timeoutMs ?? 45000);
   try {
+    const payload: Record<string, unknown> = {
+      text: params.text,
+      voice: params.voice,
+      provider: params.provider,
+      ...params.options,
+    };
     const res = await fetch(params.endpoint, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ text: params.text, voice: params.voice, provider: params.provider }),
+      body: JSON.stringify(payload),
       signal: controller.signal,
     });
     if (!res.ok) throw new Error(`tts service failed (${res.status})`);
@@ -37,11 +44,13 @@ export async function speakTts(params: {
   params.signal.addEventListener("abort", () => player.kill("SIGTERM"));
   await new Promise<void>((resolve) => player.on("close", () => resolve()));
   const playbackEnd = Date.now();
-  fs.unlinkSync(tmpWav);
+  // Don't delete the file anymore - it will be linked in the session message
+  // and cleaned up later by a scheduled task
 
   return {
     generationMs: generationEnd - ttsStart,
     playbackMs: playbackEnd - playbackStart,
     totalMs: playbackEnd - ttsStart,
+    audioPath: tmpWav,
   };
 }

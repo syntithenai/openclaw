@@ -373,6 +373,7 @@ export const OpenClawSchema = z
       .optional(),
     talk: z
       .object({
+        autoStart: z.boolean().optional(),
         voiceId: z.string().optional(),
         voiceAliases: z.record(z.string(), z.string()).optional(),
         modelId: z.string().optional(),
@@ -383,9 +384,15 @@ export const OpenClawSchema = z
         sttTimeoutMs: z.number().int().nonnegative().optional(),
         sttLanguage: z.string().optional(),
         ttsProvider: z.string().optional(),
+        ttsVoice: z.string().optional(),
         ttsEndpoint: z.string().optional(),
         ttsTimeoutMs: z.number().int().nonnegative().optional(),
+        captureBackend: z.union([z.literal("pulseaudio"), z.literal("pipewire")]).optional(),
         audioDevice: z.string().optional(),
+        voiceWakeEnabled: z.boolean().optional(),
+        voiceWakeWords: z.string().optional(),
+        voiceWakeConfidence: z.number().min(0).max(1).optional(),
+        voiceWakePhraseTimeoutMs: z.number().int().nonnegative().optional(),
       })
       .strict()
       .optional(),
