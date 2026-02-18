@@ -379,6 +379,13 @@ export const OpenClawSchema = z
         outputFormat: z.string().optional(),
         apiKey: z.string().optional().register(sensitive),
         interruptOnSpeech: z.boolean().optional(),
+        sttEndpoint: z.string().optional(),
+        sttTimeoutMs: z.number().int().nonnegative().optional(),
+        sttLanguage: z.string().optional(),
+        ttsProvider: z.string().optional(),
+        ttsEndpoint: z.string().optional(),
+        ttsTimeoutMs: z.number().int().nonnegative().optional(),
+        audioDevice: z.string().optional(),
       })
       .strict()
       .optional(),

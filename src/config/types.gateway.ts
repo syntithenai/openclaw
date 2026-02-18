@@ -59,6 +59,20 @@ export type TalkConfig = {
   apiKey?: string;
   /** Stop speaking when user starts talking (default: true). */
   interruptOnSpeech?: boolean;
+  /** STT HTTP endpoint for Talk mode (Linux). */
+  sttEndpoint?: string;
+  /** STT request timeout in ms (Linux). */
+  sttTimeoutMs?: number;
+  /** STT language hint (Linux). */
+  sttLanguage?: string;
+  /** TTS provider name (Linux). */
+  ttsProvider?: string;
+  /** TTS HTTP endpoint (Linux). */
+  ttsEndpoint?: string;
+  /** TTS request timeout in ms (Linux). */
+  ttsTimeoutMs?: number;
+  /** Input audio device identifier (Linux). */
+  audioDevice?: string;
 };
 
 export type GatewayControlUiConfig = {

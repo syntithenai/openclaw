@@ -89,3 +89,4 @@ package-lock.json
 docker-compose.yml
 docker/piper-data/en_US-amy-medium.onnx
 docker/piper-data/en_US-amy-medium.onnx.json
+Dockerfile

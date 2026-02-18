@@ -54,6 +54,27 @@ function normalizeTalkConfigSection(value: unknown): Record<string, unknown> | u
   if (typeof source.interruptOnSpeech === "boolean") {
     talk.interruptOnSpeech = source.interruptOnSpeech;
   }
+  if (typeof source.sttEndpoint === "string") {
+    talk.sttEndpoint = source.sttEndpoint;
+  }
+  if (typeof source.sttTimeoutMs === "number") {
+    talk.sttTimeoutMs = source.sttTimeoutMs;
+  }
+  if (typeof source.sttLanguage === "string") {
+    talk.sttLanguage = source.sttLanguage;
+  }
+  if (typeof source.ttsProvider === "string") {
+    talk.ttsProvider = source.ttsProvider;
+  }
+  if (typeof source.ttsEndpoint === "string") {
+    talk.ttsEndpoint = source.ttsEndpoint;
+  }
+  if (typeof source.ttsTimeoutMs === "number") {
+    talk.ttsTimeoutMs = source.ttsTimeoutMs;
+  }
+  if (typeof source.audioDevice === "string") {
+    talk.audioDevice = source.audioDevice;
+  }
   return Object.keys(talk).length > 0 ? talk : undefined;
 }
 
