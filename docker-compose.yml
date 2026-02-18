@@ -1,30 +1,4 @@
 services:
-# Whisper STT service
-  whisper:
-    restart: unless-stopped
-    build:
-      context: ${OPENCLAW_BASE_DIR}/docker/whisper
-      dockerfile: Dockerfile
-    ports:
-      - "8086:8080"
-    environment:
-      - WHISPER_MODEL=base
-      - WHISPER_DEVICE=cpu
-      - HSA_ENABLE_SDMA=0
-      - AMD_SERIALIZE_KERNEL=3
-
-  # Piper TTS HTTP service
-  piper:
-    restart: unless-stopped
-    build:
-      context: ${OPENCLAW_BASE_DIR}/docker/piper1-gpl
-      dockerfile: Dockerfile
-    command: ["server", "--model", "en_US-amy-medium"]
-    ports:
-      - "5002:5000"
-    volumes:
-      - ${OPENCLAW_BASE_DIR}/docker/piper-models:/home/piper/.local/share/piper
-      - ${OPENCLAW_BASE_DIR}/docker/piper-data:/data
   openclaw-gateway:
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -35,20 +9,28 @@ services:
     environment:
       HOME: /home/node
       TERM: xterm-256color
+      PULSE_SERVER: unix:/run/user/1000/pulse/native
+      PULSE_COOKIE: /home/node/.config/pulse/cookie
+      XDG_RUNTIME_DIR: /run/user/1000
+      BRAVE_API_KEY: ${BRAVE_API_KEY}
+      GROQ_API_KEY: ${GROQ_API_KEY}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      # Facebook Graph API (user feed access)
+      FACEBOOK_APP_ID: ${FACEBOOK_APP_ID}
+      FACEBOOK_APP_SECRET: ${FACEBOOK_APP_SECRET}
+      FACEBOOK_USER_ACCESS_TOKEN: ${FACEBOOK_USER_ACCESS_TOKEN}
       OPENCLAW_GATEWAY_TOKEN: ${OPENCLAW_GATEWAY_TOKEN}
       GOG_KEYRING_BACKEND: file
       GOG_KEYRING_PASSWORD: ${GOG_KEYRING_PASSWORD}
       GOG_ACCOUNT: ${GOG_ACCOUNT}
-      PULSE_SERVER: unix:/run/user/1000/pulse/native
-      PULSE_COOKIE: /home/node/.config/pulse/cookie
-      XDG_RUNTIME_DIR: /run/user/1000
+      
     devices:
       - /dev/snd
     group_add:
       - audio
     ipc: host
     volumes:
-      - ${OPENCLAW_BASE_DIR}/openclaw/:/app
+      #- ${OPENCLAW_BASE_DIR}/openclaw/:/app
       - ${OPENCLAW_CONFIG_DIR}:/home/node/.openclaw
       - ${OPENCLAW_WORKSPACE_DIR}:/home/node/.openclaw/workspace
       - ${OPENCLAW_CONFIG_DIR}/gogcli:/home/node/.config/gogcli
@@ -63,7 +45,7 @@ services:
       - "${OPENCLAW_BRIDGE_PORT:-18790}:18790"
       - 18792:18792
     init: true
-    network_mode: "host"
+    #network_mode: "host"
     restart: unless-stopped
     command:
       [
@@ -79,13 +61,22 @@ services:
     environment:
       HOME: /home/node
       TERM: xterm-256color
+      PULSE_SERVER: unix:/run/user/1000/pulse/native
+      PULSE_COOKIE: /home/node/.config/pulse/cookie
+      XDG_RUNTIME_DIR: /run/user/1000
+      BRAVE_API_KEY: ${BRAVE_API_KEY}
+      GROQ_API_KEY: ${GROQ_API_KEY}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      # Facebook Graph API (user feed access)
+      FACEBOOK_APP_ID: ${FACEBOOK_APP_ID}
+      FACEBOOK_APP_SECRET: ${FACEBOOK_APP_SECRET}
+      FACEBOOK_USER_ACCESS_TOKEN: ${FACEBOOK_USER_ACCESS_TOKEN}
       OPENCLAW_GATEWAY_TOKEN: ${OPENCLAW_GATEWAY_TOKEN}
-      BROWSER: echo
       GOG_KEYRING_BACKEND: file
       GOG_KEYRING_PASSWORD: ${GOG_KEYRING_PASSWORD}
       GOG_ACCOUNT: ${GOG_ACCOUNT}
     volumes:
-      - ${OPENCLAW_BASE_DIR}/openclaw/:/app
+      #- ${OPENCLAW_BASE_DIR}/openclaw/:/app
       - ${OPENCLAW_CONFIG_DIR}:/home/node/.openclaw
       - ${OPENCLAW_WORKSPACE_DIR}:/home/node/.openclaw/workspace
       - ${OPENCLAW_CONFIG_DIR}/gogcli:/home/node/.config/gogcli
@@ -94,3 +85,29 @@ services:
     tty: true
     init: true
     entrypoint: ["node", "dist/index.js"]
+# Whisper STT service
+  whisper:
+    restart: unless-stopped
+    build:
+      context: ${OPENCLAW_BASE_DIR}/openclaw/docker/whisper
+      dockerfile: Dockerfile
+    ports:
+      - "8086:8080"
+    environment:
+      - WHISPER_MODEL=base
+      - WHISPER_DEVICE=cpu
+      - HSA_ENABLE_SDMA=0
+      - AMD_SERIALIZE_KERNEL=3
+
+  # Piper TTS HTTP service
+  piper:
+    restart: unless-stopped
+    build:
+      context: ${OPENCLAW_BASE_DIR}/openclaw/docker/piper1-gpl
+      dockerfile: Dockerfile
+    command: ["server", "--model", "en_US-amy-medium"]
+    ports:
+      - "5002:5000"
+    volumes:
+      - ${OPENCLAW_BASE_DIR}/openclaw/docker/piper-models:/home/piper/.local/share/piper
+      - ${OPENCLAW_BASE_DIR}/openclaw/docker/piper-data:/data
