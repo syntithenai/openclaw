@@ -23,8 +23,8 @@ services:
     ports:
       - "5002:5000"
     volumes:
-      - ${OPENCLAW_BASE_DIR}/docker/piper-models:/home/piper/.local/share/piper
-      - ${OPENCLAW_BASE_DIR}/docker/piper-data:/data
+      - ${OPENCLAW_BASE_DIR}/openclaw/docker/piper-data:/home/piper/.local/share/piper
+      - ${OPENCLAW_BASE_DIR}/openclaw/docker/piper-data:/data
   openclaw-gateway:
     extra_hosts:
       - "host.docker.internal:host-gateway"

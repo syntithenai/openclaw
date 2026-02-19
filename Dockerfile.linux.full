@@ -59,10 +59,11 @@ RUN if [ "$OPENCLAW_INSTALL_GCLOUD" = "true" ]; then \
 
 # Install ffmpeg + PulseAudio utilities for talk mode.
 # Whisper CLI is optional to avoid heavy torch downloads during image rebuilds.
+# Pandoc is required for markdown-to-DOCX conversion in google-apis skill.
 ARG OPENCLAW_INSTALL_WHISPER_CLI="false"
 RUN apt-get update && \
   DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-  ffmpeg python3 python3-venv pulseaudio-utils && \
+  ffmpeg pandoc python3 python3-venv pulseaudio-utils && \
   if [ "$OPENCLAW_INSTALL_WHISPER_CLI" = "true" ]; then \
     python3 -m venv /opt/whisper-venv && \
     /opt/whisper-venv/bin/pip install --no-cache-dir --disable-pip-version-check openai-whisper && \
