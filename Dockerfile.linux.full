@@ -41,7 +41,7 @@ RUN apt-get update && \
   fi
 
 # Install gcloud CLI (required for Gmail Pub/Sub setup)
-ARG OPENCLAW_INSTALL_GCLOUD="false"
+ARG OPENCLAW_INSTALL_GCLOUD="true"
 RUN if [ "$OPENCLAW_INSTALL_GCLOUD" = "true" ]; then \
   apt-get update && \
   DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
@@ -58,9 +58,9 @@ RUN if [ "$OPENCLAW_INSTALL_GCLOUD" = "true" ]; then \
   fi
 
 # Install ffmpeg + PulseAudio utilities for talk mode.
-# Whisper CLI is optional to avoid heavy torch downloads during image rebuilds.
+# Whisper CLI is enabled by default for transcript/audio features.
 # Pandoc is required for markdown-to-DOCX conversion in google-apis skill.
-ARG OPENCLAW_INSTALL_WHISPER_CLI="false"
+ARG OPENCLAW_INSTALL_WHISPER_CLI="true"
 RUN apt-get update && \
   DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
   ffmpeg pandoc python3 python3-venv pulseaudio-utils && \
