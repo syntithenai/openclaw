@@ -23,12 +23,35 @@ if (mode !== "lint" && mode !== "format") {
 const lintExts = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"]);
 const formatExts = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".json", ".md", ".mdx"]);
 
+const formatIgnorePrefixes = [
+  "apps/",
+  "assets/",
+  "dist/",
+  "docs/_layouts/",
+  "node_modules/",
+  "patches/",
+  "src/auto-reply/reply/export-html/",
+  "Swabble/",
+  "vendor/",
+];
+const formatIgnoreExact = new Set(["docker-compose.yml"]);
+
+const isFormatIgnored = (filePath) => {
+  if (formatIgnoreExact.has(filePath)) {
+    return true;
+  }
+  return formatIgnorePrefixes.some((prefix) => filePath.startsWith(prefix));
+};
+
 const shouldSelect = (filePath) => {
   const ext = path.extname(filePath).toLowerCase();
   if (mode === "lint") {
     return lintExts.has(ext);
   }
-  return formatExts.has(ext);
+  if (!formatExts.has(ext)) {
+    return false;
+  }
+  return !isFormatIgnored(filePath);
 };
 
 for (const file of files) {
