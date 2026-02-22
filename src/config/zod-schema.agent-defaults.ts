@@ -105,6 +105,16 @@ export const AgentDefaultsSchema = z
       })
       .strict()
       .optional(),
+    compactSchema: z
+      .union([z.boolean(), z.string(), z.array(z.string())])
+      .optional()
+      .describe(
+        "Compact tool schemas sent to LLM inference endpoints. true = all tools, string = one tool, array = multiple tools.",
+      ),
+    promptMode: z
+      .union([z.literal("full"), z.literal("minimal"), z.literal("compact"), z.literal("none")])
+      .optional()
+      .describe("System prompt verbosity mode (full/minimal/compact/none)."),
     thinkingDefault: z
       .union([
         z.literal("off"),

@@ -63,6 +63,10 @@ export type AgentConfig = {
     prune?: SandboxPruneSettings;
   };
   tools?: AgentToolsConfig;
+  /** Enable compact tool schemas to reduce token usage. */
+  compactSchema?: boolean | string | string[];
+  /** Control system prompt verbosity. */
+  promptMode?: "full" | "minimal" | "compact" | "none";
 };
 
 export type AgentsConfig = {

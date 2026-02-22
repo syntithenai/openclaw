@@ -614,6 +614,14 @@ export const AgentEntrySchema = z
       .optional(),
     sandbox: AgentSandboxSchema,
     tools: AgentToolsSchema,
+    compactSchema: z
+      .union([z.boolean(), z.string(), z.array(z.string())])
+      .optional()
+      .describe("Enable compact tool schemas to reduce token usage"),
+    promptMode: z
+      .union([z.literal("full"), z.literal("minimal"), z.literal("compact"), z.literal("none")])
+      .optional()
+      .describe("Control system prompt verbosity"),
   })
   .strict();
 

@@ -493,6 +493,65 @@ describe("buildAgentSystemPrompt", () => {
     expect(prompt).toContain("## Reactions");
     expect(prompt).toContain("Reactions are enabled for Telegram in MINIMAL mode.");
   });
+
+  it("uses compact mode to reduce prompt size", () => {
+    const prompt = buildAgentSystemPrompt({
+      workspaceDir: "/tmp/openclaw",
+      promptMode: "compact",
+      ownerNumbers: ["+123"],
+      skillsPrompt:
+        "<available_skills>\n  <skill>\n    <name>demo</name>\n  </skill>\n</available_skills>",
+      heartbeatPrompt: "ping",
+      toolNames: ["message", "memory_search"],
+      docsPath: "/tmp/openclaw/docs",
+      ttsHint: "Voice (TTS) is enabled.",
+      modelAliasLines: ["fast: anthropic/claude-3-5-haiku"],
+    });
+
+    // Compact mode should skip or condense verbose sections
+    expect(prompt).not.toContain("## Documentation");
+    expect(prompt).not.toContain("## OpenClaw CLI Quick Reference");
+    expect(prompt).not.toContain("## OpenClaw Self-Update");
+    expect(prompt).not.toContain("## Model Aliases");
+
+    // Safety should be condensed
+    expect(prompt).toContain("## Safety");
+    expect(prompt).toContain(
+      "No independent goals; prioritize user safety; comply with stop/pause requests; never bypass safeguards.",
+    );
+    expect(prompt).not.toContain("Inspired by Anthropic's constitution");
+
+    // Silent replies should be condensed (no examples)
+    expect(prompt).toContain("## Silent Replies");
+    expect(prompt).toContain(SILENT_REPLY_TOKEN);
+    expect(prompt).not.toContain("❌ Wrong:");
+    expect(prompt).not.toContain("✅ Right:");
+
+    // Heartbeats should be condensed
+    expect(prompt).toContain("## Heartbeats");
+    expect(prompt).toContain("HEARTBEAT_OK");
+    expect(prompt).not.toContain(
+      "If you receive a heartbeat poll (a user message matching the heartbeat prompt above)",
+    );
+
+    // Runtime info should be simplified
+    expect(prompt).toContain("## Runtime");
+    expect(prompt).toContain("Reasoning:");
+  });
+
+  it("compact mode still includes core sections", () => {
+    const prompt = buildAgentSystemPrompt({
+      workspaceDir: "/tmp/openclaw",
+      promptMode: "compact",
+    });
+
+    // Core sections should still be present
+    expect(prompt).toContain("You are a personal assistant running inside OpenClaw");
+    expect(prompt).toContain("## Tooling");
+    expect(prompt).toContain("## Safety");
+    expect(prompt).toContain("## Workspace");
+    expect(prompt).toContain("## Runtime");
+  });
 });
 
 describe("buildSubagentSystemPrompt", () => {

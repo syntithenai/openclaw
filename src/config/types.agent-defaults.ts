@@ -162,6 +162,21 @@ export type AgentDefaultsConfig = {
   contextPruning?: AgentContextPruningConfig;
   /** Compaction tuning and pre-compaction memory flush behavior. */
   compaction?: AgentCompactionConfig;
+  /**
+   * Compact tool schemas sent to LLM inference endpoints to reduce token usage.
+   * - true: compact all tools
+   * - string: compact a specific tool by name
+   * - string[]: compact multiple tools by name
+   */
+  compactSchema?: boolean | string | string[];
+  /**
+   * System prompt verbosity mode.
+   * - "full": All sections with detailed instructions (default)
+   * - "minimal": Reduced sections (for subagents)
+   * - "compact": Optimized for token reduction
+   * - "none": Minimal system prompt
+   */
+  promptMode?: "full" | "minimal" | "compact" | "none";
   /** Vector memory search configuration (per-agent overrides supported). */
   memorySearch?: MemorySearchConfig;
   /** Default thinking level when no /think directive is present. */

@@ -28,6 +28,8 @@ type ResolvedAgentConfig = {
   subagents?: AgentEntry["subagents"];
   sandbox?: AgentEntry["sandbox"];
   tools?: AgentEntry["tools"];
+  compactSchema?: AgentEntry["compactSchema"];
+  promptMode?: AgentEntry["promptMode"];
 };
 
 let defaultAgentWarned = false;
@@ -122,6 +124,8 @@ export function resolveAgentConfig(
     subagents: typeof entry.subagents === "object" && entry.subagents ? entry.subagents : undefined,
     sandbox: entry.sandbox,
     tools: entry.tools,
+    compactSchema: entry.compactSchema,
+    promptMode: entry.promptMode,
   };
 }
 
