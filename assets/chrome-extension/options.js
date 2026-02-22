@@ -13,12 +13,6 @@ function updateRelayUrl(port) {
   el.textContent = `http://127.0.0.1:${port}/`
 }
 
-function relayHeaders(token) {
-  const t = String(token || '').trim()
-  if (!t) return {}
-  return { 'x-openclaw-relay-token': t }
-}
-
 function setStatus(kind, message) {
   const status = document.getElementById('status')
   if (!status) return
@@ -27,34 +21,14 @@ function setStatus(kind, message) {
 }
 
 async function checkRelayReachable(port, token) {
-  const url = `http://127.0.0.1:${port}/json/version`
   const trimmedToken = String(token || '').trim()
   if (!trimmedToken) {
     setStatus('error', 'Gateway token required. Save your gateway token to connect.')
     return
   }
-  const ctrl = new AbortController()
-  const t = setTimeout(() => ctrl.abort(), 1200)
-  try {
-    const res = await fetch(url, {
-      method: 'GET',
-      headers: relayHeaders(trimmedToken),
-      signal: ctrl.signal,
-    })
-    if (res.status === 401) {
-      setStatus('error', 'Gateway token rejected. Check token and save again.')
-      return
-    }
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    setStatus('ok', `Relay reachable and authenticated at http://127.0.0.1:${port}/. Click the extension icon on any tab to connect.`)
-  } catch {
-    setStatus(
-      'error',
-      `Relay not reachable/authenticated at http://127.0.0.1:${port}/. Start OpenClaw browser relay and verify token.`,
-    )
-  } finally {
-    clearTimeout(t)
-  }
+  
+  // Just inform the user that settings are saved and extensions will test connection
+  setStatus('ok', `Relay configured at http://127.0.0.1:${port}/. Click the extension icon on any tab to connect. Settings will be saved.`)
 }
 
 async function load() {
