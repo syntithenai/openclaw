@@ -3,6 +3,10 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     image: ${OPENCLAW_IMAGE:-openclaw:local}
+    build:
+      context: .
+      args:
+        OPENCLAW_INSTALL_BROWSER: ${OPENCLAW_INSTALL_BROWSER:-1}
     user: "1000:1000"
     env_file:
       - .env
@@ -46,6 +50,10 @@ services:
 
   openclaw-cli:
     image: ${OPENCLAW_IMAGE:-openclaw:local}
+    build:
+      context: .
+      args:
+        OPENCLAW_INSTALL_BROWSER: ${OPENCLAW_INSTALL_BROWSER:-1}
     env_file:
       - .env
     environment:
@@ -72,3 +80,7 @@ services:
     tty: true
     init: true
     entrypoint: ["node", "dist/index.js"]
+
+networks:
+  default:
+    name: openclaw_default
