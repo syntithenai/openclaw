@@ -451,3 +451,16 @@ chrome.runtime.onInstalled.addListener(() => {
   // Useful: first-time instructions.
   void chrome.runtime.openOptionsPage()
 })
+
+// Listen for settings updates from options page
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message?.type === 'settingsUpdated') {
+    // Clear relay connection so next click will use new token
+    if (relayWs) {
+      relayWs.close()
+      relayWs = null
+    }
+    relayConnectPromise = null
+    sendResponse({ success: true })
+  }
+})

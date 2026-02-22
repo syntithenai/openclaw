@@ -46,7 +46,7 @@ async function checkRelayReachable(port, token) {
       return
     }
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    setStatus('ok', `Relay reachable and authenticated at http://127.0.0.1:${port}/`)
+    setStatus('ok', `Relay reachable and authenticated at http://127.0.0.1:${port}/. Click the extension icon on any tab to connect.`)
   } catch {
     setStatus(
       'error',
@@ -76,6 +76,14 @@ async function save() {
   portInput.value = String(port)
   tokenInput.value = token
   updateRelayUrl(port)
+  
+  // Notify background script to clear old connection state
+  try {
+    await chrome.runtime.sendMessage({ type: 'settingsUpdated' })
+  } catch {
+    // Ignore if background script isn't ready
+  }
+  
   await checkRelayReachable(port, token)
 }
 
