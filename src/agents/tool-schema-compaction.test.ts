@@ -233,4 +233,60 @@ describe("applyToolSchemaCompaction", () => {
     expect(result[1]?.description).toBe("Write a file");
     expect(result[2]?.description).toBe("Execute a command. Extra.");
   });
+
+  it("preserves Claude Code parameter aliases (file_path, old_string, new_string)", () => {
+    const tools = [
+      {
+        name: "read",
+        label: "read",
+        description: "Read a file",
+        parameters: {
+          type: "object",
+          properties: {
+            path: { type: "string", description: "File path" },
+            file_path: { type: "string", description: "File path alias" },
+          },
+          required: ["path"],
+        },
+        execute: async () => ({ content: [], details: {} }),
+      },
+      {
+        name: "edit",
+        label: "edit",
+        description: "Edit a file",
+        parameters: {
+          type: "object",
+          properties: {
+            path: { type: "string", description: "File path" },
+            file_path: { type: "string", description: "File path alias" },
+            oldText: { type: "string", description: "Old text" },
+            old_string: { type: "string", description: "Old text alias" },
+            newText: { type: "string", description: "New text" },
+            new_string: { type: "string", description: "New text alias" },
+          },
+          required: ["path", "oldText", "newText"],
+        },
+        execute: async () => ({ content: [], details: {} }),
+      },
+    ] as unknown as AgentTool[];
+
+    const result = applyToolSchemaCompaction(tools, true);
+
+    // Check read tool preserves file_path alias
+    const readParams = result[0]?.parameters as Record<string, unknown>;
+    const readProps = readParams.properties as Record<string, unknown>;
+    expect(Object.keys(readProps).toSorted()).toEqual(["file_path", "path"]);
+
+    // Check edit tool preserves all aliases
+    const editParams = result[1]?.parameters as Record<string, unknown>;
+    const editProps = editParams.properties as Record<string, unknown>;
+    expect(Object.keys(editProps).toSorted()).toEqual([
+      "file_path",
+      "newText",
+      "new_string",
+      "oldText",
+      "old_string",
+      "path",
+    ]);
+  });
 });
