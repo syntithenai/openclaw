@@ -23,6 +23,10 @@ export function compactToolSchema(tool: AnyAgentTool): AnyAgentTool {
   };
 }
 
+// Important parameter aliases that should never be removed even if optional
+// These are critical for Claude Code compatibility and model training data
+const PRESERVED_ALIASES = new Set(["file_path", "old_string", "new_string"]);
+
 /**
  * Helper to compact a schema object recursively.
  * Removes optional properties and simplifies descriptions.
@@ -38,14 +42,17 @@ function compactSchemaObject(schema: Record<string, unknown>): Record<string, un
     compacted.type = schema.type;
   }
 
-  // Only include required properties
+  // Only include required properties and important aliases
   if ("properties" in schema && typeof schema.properties === "object" && schema.properties) {
     const properties = schema.properties as Record<string, unknown>;
     const compactedProperties: Record<string, unknown> = {};
 
     for (const [key, value] of Object.entries(properties)) {
-      // Only include if it's required or if there are no required fields (keep all)
-      if (required.length === 0 || required.includes(key)) {
+      // Include if it's required, no required fields exist, or it's a preserved alias
+      const shouldInclude =
+        required.length === 0 || required.includes(key) || PRESERVED_ALIASES.has(key);
+
+      if (shouldInclude) {
         if (value && typeof value === "object") {
           const propSchema = { ...(value as Record<string, unknown>) };
 
