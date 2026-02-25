@@ -3,6 +3,7 @@ import { isSilentReplyText, SILENT_REPLY_TOKEN } from "../auto-reply/tokens.js";
 import { loadConfig } from "../config/config.js";
 import { type AgentEventPayload, getAgentRunContext } from "../infra/agent-events.js";
 import { resolveHeartbeatVisibility } from "../infra/heartbeat-visibility.js";
+import { escapeRegExp } from "../utils.js";
 import { loadSessionEntry } from "./session-utils.js";
 import { formatForLog } from "./ws-log.js";
 
@@ -24,6 +25,22 @@ function shouldSuppressHeartbeatBroadcast(runId: string): boolean {
     // Default to suppressing if we can't load config
     return true;
   }
+}
+
+function stripTrailingSilentToken(text: string): { text: string; silentOnly: boolean } {
+  const trimmed = text.trim();
+  if (!trimmed) {
+    return { text, silentOnly: false };
+  }
+  if (trimmed === SILENT_REPLY_TOKEN) {
+    return { text: "", silentOnly: true };
+  }
+  const escaped = escapeRegExp(SILENT_REPLY_TOKEN);
+  const suffix = new RegExp(`\\s*\\b${escaped}\\b\\s*$`);
+  if (!suffix.test(text)) {
+    return { text, silentOnly: false };
+  }
+  return { text: text.replace(suffix, ""), silentOnly: false };
 }
 
 export type ChatRunEntry = {
@@ -229,10 +246,18 @@ export function createAgentEventHandler({
   toolEventRecipients,
 }: AgentEventHandlerOptions) {
   const emitChatDelta = (sessionKey: string, clientRunId: string, seq: number, text: string) => {
-    if (isSilentReplyText(text, SILENT_REPLY_TOKEN)) {
+    const cleaned = stripTrailingSilentToken(text);
+    if (cleaned.silentOnly) {
       return;
     }
-    chatRunState.buffers.set(clientRunId, text);
+    if (isSilentReplyText(cleaned.text, SILENT_REPLY_TOKEN)) {
+      return;
+    }
+    const deltaText = cleaned.text;
+    if (!deltaText.trim()) {
+      return;
+    }
+    chatRunState.buffers.set(clientRunId, deltaText);
     const now = Date.now();
     const last = chatRunState.deltaSentAt.get(clientRunId) ?? 0;
     if (now - last < 150) {
@@ -246,7 +271,7 @@ export function createAgentEventHandler({
       state: "delta" as const,
       message: {
         role: "assistant",
-        content: [{ type: "text", text }],
+        content: [{ type: "text", text: deltaText }],
         timestamp: now,
       },
     };
@@ -264,8 +289,10 @@ export function createAgentEventHandler({
     jobState: "done" | "error",
     error?: unknown,
   ) => {
-    const text = chatRunState.buffers.get(clientRunId)?.trim() ?? "";
-    const shouldSuppressSilent = isSilentReplyText(text, SILENT_REPLY_TOKEN);
+    const raw = chatRunState.buffers.get(clientRunId) ?? "";
+    const cleaned = stripTrailingSilentToken(raw);
+    const text = cleaned.text.trim();
+    const shouldSuppressSilent = cleaned.silentOnly || isSilentReplyText(text, SILENT_REPLY_TOKEN);
     chatRunState.buffers.delete(clientRunId);
     chatRunState.deltaSentAt.delete(clientRunId);
     if (jobState === "done") {
