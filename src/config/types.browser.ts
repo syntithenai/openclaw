@@ -7,6 +7,8 @@ export type BrowserProfileConfig = {
   driver?: "openclaw" | "extension";
   /** Profile color (hex). Auto-assigned at creation. */
   color: string;
+  /** Bind host for CDP port. Default: 127.0.0.1 (loopback) */
+  bindHost?: string;
 };
 export type BrowserSnapshotDefaults = {
   /** Default snapshot mode (applies when mode is not provided). */

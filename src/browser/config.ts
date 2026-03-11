@@ -273,14 +273,17 @@ export function resolveProfile(
   let cdpPort = profile.cdpPort ?? 0;
   let cdpUrl = "";
   const driver = profile.driver === "extension" ? "extension" : "openclaw";
+  // Profile-specific bind host overrides global cdpHost
+  const bindHost = profile.bindHost?.trim() || resolved.cdpHost;
 
   if (rawProfileUrl) {
     const parsed = parseHttpUrl(rawProfileUrl, `browser.profiles.${profileName}.cdpUrl`);
-    cdpHost = parsed.parsed.hostname;
+    // Use bindHost override if set; otherwise use cdpUrl hostname
+    cdpHost = bindHost !== resolved.cdpHost ? bindHost : parsed.parsed.hostname;
     cdpPort = parsed.port;
     cdpUrl = parsed.normalized;
   } else if (cdpPort) {
-    cdpUrl = `${resolved.cdpProtocol}://${resolved.cdpHost}:${cdpPort}`;
+    cdpUrl = `${resolved.cdpProtocol}://${bindHost}:${cdpPort}`;
   } else {
     throw new Error(`Profile "${profileName}" must define cdpPort or cdpUrl.`);
   }

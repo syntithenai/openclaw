@@ -189,6 +189,8 @@ export async function launchOpenClawChrome(
   const spawnOnce = () => {
     const args: string[] = [
       `--remote-debugging-port=${profile.cdpPort}`,
+      // Bind CDP to all interfaces (for Docker/network access)
+      `--remote-debugging-port-ip=0.0.0.0`,
       `--user-data-dir=${userDataDir}`,
       "--no-first-run",
       "--no-default-browser-check",
