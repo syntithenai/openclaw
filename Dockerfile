@@ -14,7 +14,8 @@ RUN apt-get update && \
       mpd \
       mpc \
       alsa-utils \
-      pulseaudio-utils && \
+      pulseaudio-utils \
+      pandoc && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*
 
