@@ -50,10 +50,15 @@ export function extractToolCards(message: unknown): ToolCard[] {
 
 export function renderToolCardSidebar(card: ToolCard, onOpenSidebar?: (content: string) => void) {
   const display = resolveToolDisplay({ name: card.name, args: card.args });
-  const detail = formatToolDetail(display);
+  const lifecycleErrorDetail = resolveLifecyclePayloadError(card);
+  const detail = lifecycleErrorDetail ?? formatToolDetail(display);
   const hasText = Boolean(card.text?.trim());
+  const expandableLabel = hasText ? resolveExpandableLabel(display.name) : null;
+  const showExpandableOutput = Boolean(expandableLabel);
+  const isLifecyclePayloadError = lifecycleErrorDetail !== null;
+  const cardLabel = isLifecyclePayloadError ? "Error" : display.label;
 
-  const canClick = Boolean(onOpenSidebar);
+  const canClick = Boolean(onOpenSidebar) && !showExpandableOutput;
   const handleClick = canClick
     ? () => {
         if (hasText) {
@@ -68,13 +73,13 @@ export function renderToolCardSidebar(card: ToolCard, onOpenSidebar?: (content: 
     : undefined;
 
   const isShort = hasText && (card.text?.length ?? 0) <= TOOL_INLINE_THRESHOLD;
-  const showCollapsed = hasText && !isShort;
-  const showInline = hasText && isShort;
+  const showCollapsed = hasText && !isShort && !showExpandableOutput;
+  const showInline = hasText && isShort && !showExpandableOutput;
   const isEmpty = !hasText;
 
   return html`
     <div
-      class="chat-tool-card ${canClick ? "chat-tool-card--clickable" : ""}"
+      class="chat-tool-card ${canClick ? "chat-tool-card--clickable" : ""} ${isLifecyclePayloadError ? "chat-tool-card--error" : ""}"
       @click=${handleClick}
       role=${canClick ? "button" : nothing}
       tabindex=${canClick ? "0" : nothing}
@@ -93,7 +98,7 @@ export function renderToolCardSidebar(card: ToolCard, onOpenSidebar?: (content: 
       <div class="chat-tool-card__header">
         <div class="chat-tool-card__title">
           <span class="chat-tool-card__icon">${icons[display.icon]}</span>
-          <span>${display.label}</span>
+          <span>${cardLabel}</span>
         </div>
         ${
           canClick
@@ -115,9 +120,63 @@ export function renderToolCardSidebar(card: ToolCard, onOpenSidebar?: (content: 
           ? html`<div class="chat-tool-card__preview mono">${getTruncatedPreview(card.text!)}</div>`
           : nothing
       }
+      ${
+        showExpandableOutput
+          ? html`
+              <details class="chat-tool-card__details">
+                <summary class="chat-tool-card__summary">
+                  <span>${expandableLabel}</span>
+                  <span class="chat-tool-card__summary-meta">${card.text!.length} chars</span>
+                </summary>
+                <div class="chat-tool-card__output mono">${card.text}</div>
+              </details>
+            `
+          : nothing
+      }
       ${showInline ? html`<div class="chat-tool-card__inline mono">${card.text}</div>` : nothing}
     </div>
   `;
+}
+
+function resolveExpandableLabel(name: string): string | null {
+  const normalized = name.toLowerCase().replace(/[.-]/g, "_");
+  if (normalized === "exec") {
+    return "result";
+  }
+  if (
+    normalized === "web_fetch" ||
+    normalized === "fetch_webpage" ||
+    normalized === "web_search" ||
+    normalized === "search_web"
+  ) {
+    return "content";
+  }
+  return null;
+}
+
+function resolveLifecyclePayloadError(card: ToolCard): string | null {
+  const normalizedName = card.name.toLowerCase().replace(/[.-]/g, "_");
+  if (normalizedName !== "lifecycle") {
+    return null;
+  }
+
+  const args = card.args;
+  if (!args || typeof args !== "object") {
+    return card.text?.trim() ?? null;
+  }
+
+  const data = args as Record<string, unknown>;
+  const phase = typeof data.phase === "string" ? data.phase.toLowerCase() : "";
+  const errorText =
+    (typeof data.error === "string" && data.error.trim()) ||
+    (typeof data.reason === "string" && data.reason.trim()) ||
+    null;
+
+  if (phase === "error") {
+    return errorText ?? card.text?.trim() ?? "Lifecycle error";
+  }
+
+  return errorText;
 }
 
 function normalizeContent(content: unknown): Array<Record<string, unknown>> {

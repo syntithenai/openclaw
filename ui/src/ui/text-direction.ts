@@ -5,7 +5,9 @@
  */
 
 const RTL_CHAR_REGEX =
-  /\p{Script=Hebrew}|\p{Script=Arabic}|\p{Script=Syriac}|\p{Script=Thaana}|\p{Script=Nko}|\p{Script=Samaritan}|\p{Script=Mandaic}|\p{Script=Adlam}|\p{Script=Phoenician}|\p{Script=Lydian}/u;
+  /[\u0590-\u05FF\u0600-\u06FF\u0700-\u074F\u0780-\u07BF\u07C0-\u07FF\u0800-\u083F\u0840-\u085F\u08A0-\u08FF\u{10900}-\u{1091F}\u{10920}-\u{1093F}\u{1E900}-\u{1E95F}]/u;
+
+const DEFAULT_SKIP_PATTERN = /[\s!"#$%&'()*+,./:;<=>?@[\\\]^_`{|}~-]/;
 
 /**
  * Detect text direction from the first significant character.
@@ -15,7 +17,7 @@ const RTL_CHAR_REGEX =
  */
 export function detectTextDirection(
   text: string | null,
-  skipPattern: RegExp = /[\s\p{P}\p{S}]/u,
+  skipPattern: RegExp = DEFAULT_SKIP_PATTERN,
 ): "rtl" | "ltr" {
   if (!text) {
     return "ltr";

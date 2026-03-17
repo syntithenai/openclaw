@@ -1490,6 +1490,18 @@
   background: var(--bg-muted);
 }
 
+.chat-tool-card--error {
+  border-color: var(--danger-subtle);
+  background: var(--danger-subtle);
+}
+
+.chat-tool-card--error .chat-tool-card__title,
+.chat-tool-card--error .chat-tool-card__detail,
+.chat-tool-card--error .chat-tool-card__summary,
+.chat-tool-card--error .chat-tool-card__summary-meta {
+  color: var(--danger);
+}
+
 .chat-tool-card__title {
   font-family: var(--mono);
   font-size: 12px;
@@ -1542,10 +1554,16 @@
   border-radius: var(--radius-md);
   border: 1px solid var(--border);
   background: var(--card);
+  max-height: 220px;
+  overflow: auto;
 }
 
 :root[data-theme="light"] .chat-tool-card__output {
   background: var(--bg);
+}
+
+.chat-tool-card--error .chat-tool-card__output {
+  border-color: var(--danger-subtle);
 }
 
 .chat-stamp {
