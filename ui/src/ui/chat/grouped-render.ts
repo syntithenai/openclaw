@@ -4,6 +4,7 @@ import type { AssistantIdentity } from "../assistant-identity.ts";
 import { toSanitizedMarkdownHtml } from "../markdown.ts";
 import { detectTextDirection } from "../text-direction.ts";
 import type { MessageGroup } from "../types/chat-types.ts";
+import { splitAssistantContent } from "./assistant-content.ts";
 import { renderCopyAsMarkdownButton } from "./copy-as-markdown.ts";
 import {
   extractTextCached,
@@ -12,6 +13,7 @@ import {
 } from "./message-extract.ts";
 import { isToolResultMessage, normalizeRoleForGrouping } from "./message-normalizer.ts";
 import { extractToolCards, renderToolCardSidebar } from "./tool-cards.ts";
+import "./mermaid-chart.ts";
 
 type ImageBlock = {
   url: string;
@@ -241,6 +243,8 @@ function renderGroupedMessage(
   const markdownBase = extractedText?.trim() ? extractedText : null;
   const reasoningMarkdown = extractedThinking ? formatReasoningMarkdown(extractedThinking) : null;
   const markdown = markdownBase;
+  const assistantSegments = role === "assistant" && markdown ? splitAssistantContent(markdown) : [];
+  const hasAssistantSegments = assistantSegments.length > 0;
   const canCopyMarkdown = role === "assistant" && Boolean(markdown?.trim());
 
   const bubbleClasses = [
@@ -273,7 +277,17 @@ function renderGroupedMessage(
       }
       ${
         markdown
-          ? html`<div class="chat-text" dir="${detectTextDirection(markdown)}">${unsafeHTML(toSanitizedMarkdownHtml(markdown))}</div>`
+          ? html`<div class="chat-text" dir="${detectTextDirection(markdown)}">
+              ${
+                hasAssistantSegments
+                  ? assistantSegments.map((segment) =>
+                      segment.type === "markdown"
+                        ? html`<div>${unsafeHTML(toSanitizedMarkdownHtml(segment.text))}</div>`
+                        : html`<oc-mermaid-chart .source=${segment.text}></oc-mermaid-chart>`,
+                    )
+                  : unsafeHTML(toSanitizedMarkdownHtml(markdown))
+              }
+            </div>`
           : nothing
       }
       ${toolCards.map((card) => renderToolCardSidebar(card, onOpenSidebar))}

@@ -87,6 +87,17 @@ describe("buildAgentSystemPrompt", () => {
     expect(prompt).toContain("Voice (TTS) is enabled.");
   });
 
+  it("allows markdown and mermaid output for longer answers", () => {
+    const prompt = buildAgentSystemPrompt({
+      workspaceDir: "/tmp/openclaw",
+    });
+
+    expect(prompt).toContain("## Output Formatting");
+    expect(prompt).toContain("Markdown is allowed");
+    expect(prompt).toContain("<mermaidchart>");
+    expect(prompt).toContain("Mermaid source");
+  });
+
   it("adds reasoning tag hint when enabled", () => {
     const prompt = buildAgentSystemPrompt({
       workspaceDir: "/tmp/openclaw",

@@ -149,6 +149,21 @@ function buildVoiceSection(params: { isMinimal: boolean; ttsHint?: string }) {
   return ["## Voice (TTS)", hint, ""];
 }
 
+function buildOutputFormattingSection(isMinimal: boolean, isCompact: boolean) {
+  if (isMinimal) {
+    return [];
+  }
+  return [
+    "## Output Formatting",
+    isCompact
+      ? "Markdown is allowed for longer, structured replies; keep short replies plain when formatting adds no value."
+      : "Markdown is allowed and preferred for longer, structured replies; keep short/simple replies plain when formatting adds no value.",
+    "If a diagram helps, you may include Mermaid markup wrapped in <mermaidchart>...</mermaidchart> tags.",
+    "Inside <mermaidchart>, include only Mermaid source; do not add prose or wrap it in code fences.",
+    "",
+  ];
+}
+
 function buildDocsSection(params: { docsPath?: string; isMinimal: boolean; readToolName: string }) {
   const docsPath = params.docsPath?.trim();
   if (!docsPath || params.isMinimal) {
@@ -394,6 +409,7 @@ export function buildAgentSystemPrompt(params: {
     availableTools,
     citationsMode: params.memoryCitationsMode,
   });
+  const outputFormattingSection = buildOutputFormattingSection(isMinimal, isCompact);
   const docsSection = buildDocsSection({
     docsPath: params.docsPath,
     isMinimal: isMinimal || isCompact,
@@ -443,6 +459,7 @@ export function buildAgentSystemPrompt(params: {
     "Keep narration brief and value-dense; avoid repeating obvious steps.",
     "Use plain human language for narration unless in a technical context.",
     "",
+    ...outputFormattingSection,
     ...safetySection,
     // Skip CLI quick reference for compact mode
     !isCompact ? "## OpenClaw CLI Quick Reference" : "",
