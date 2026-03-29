@@ -52,6 +52,61 @@ describe("waitForAgentJob", () => {
     expect(snapshot?.startedAt).toBe(300);
     expect(snapshot?.endedAt).toBe(400);
   });
+
+  it("resolves as error when retry restarts and then stalls without terminal lifecycle", async () => {
+    vi.useFakeTimers();
+    try {
+      const runId = `run-retry-stall-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const waitPromise = waitForAgentJob({ runId, timeoutMs: 60_000 });
+
+      emitAgentEvent({ runId, stream: "lifecycle", data: { phase: "start", startedAt: 500 } });
+      emitAgentEvent({
+        runId,
+        stream: "lifecycle",
+        data: { phase: "error", error: "Connection error." },
+      });
+      emitAgentEvent({ runId, stream: "lifecycle", data: { phase: "start", startedAt: 700 } });
+      emitAgentEvent({ runId, stream: "tool", data: { phase: "start", name: "exec" } });
+
+      await vi.advanceTimersByTimeAsync(20_001);
+      const snapshot = await waitPromise;
+
+      expect(snapshot).not.toBeNull();
+      expect(snapshot?.status).toBe("error");
+      expect(snapshot?.error).toContain("Connection error");
+      expect(snapshot?.error).toContain(
+        "Retry restarted but no terminal lifecycle event was received.",
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("keeps retry runs as ok when lifecycle end arrives before stall timeout", async () => {
+    vi.useFakeTimers();
+    try {
+      const runId = `run-retry-ok-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const waitPromise = waitForAgentJob({ runId, timeoutMs: 60_000 });
+
+      emitAgentEvent({ runId, stream: "lifecycle", data: { phase: "start", startedAt: 800 } });
+      emitAgentEvent({
+        runId,
+        stream: "lifecycle",
+        data: { phase: "error", error: "Connection error." },
+      });
+      emitAgentEvent({ runId, stream: "lifecycle", data: { phase: "start", startedAt: 900 } });
+      emitAgentEvent({ runId, stream: "assistant", data: { text: "retrying" } });
+      emitAgentEvent({ runId, stream: "lifecycle", data: { phase: "end", endedAt: 950 } });
+
+      const snapshot = await waitPromise;
+
+      expect(snapshot).not.toBeNull();
+      expect(snapshot?.status).toBe("ok");
+      expect(snapshot?.endedAt).toBe(950);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
 
 describe("injectTimestamp", () => {

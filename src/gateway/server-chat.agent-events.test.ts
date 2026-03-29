@@ -155,6 +155,195 @@ describe("agent event handler", () => {
     nowSpy?.mockRestore();
   });
 
+  it("does not emit seq-gap error for the first observed event in a run", () => {
+    const { broadcast, handler } = createHarness();
+
+    handler({
+      runId: "run-seq-bootstrap",
+      seq: 3,
+      stream: "lifecycle",
+      ts: Date.now(),
+      data: { phase: "start", startedAt: Date.now() },
+    });
+
+    const agentErrorCalls = broadcast.mock.calls.filter(
+      ([event, payload]) =>
+        event === "agent" &&
+        !!payload &&
+        typeof payload === "object" &&
+        (payload as { stream?: string }).stream === "error",
+    );
+    expect(agentErrorCalls).toHaveLength(0);
+  });
+
+  it("emits chat error final after lifecycle error grace period", () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(10_000);
+      const { broadcast, nodeSendToSession, chatRunState, handler } = createHarness();
+      chatRunState.registry.add("run-lifecycle-error", {
+        sessionKey: "session-error",
+        clientRunId: "client-error",
+      });
+
+      handler({
+        runId: "run-lifecycle-error",
+        seq: 1,
+        stream: "assistant",
+        ts: Date.now(),
+        data: { text: "Working on it" },
+      });
+      handler({
+        runId: "run-lifecycle-error",
+        seq: 2,
+        stream: "lifecycle",
+        ts: Date.now(),
+        data: { phase: "error", error: "Connection error." },
+      });
+
+      expect(chatBroadcastCalls(broadcast)).toHaveLength(1);
+      vi.advanceTimersByTime(15_000);
+
+      const chatCalls = chatBroadcastCalls(broadcast);
+      expect(chatCalls).toHaveLength(2);
+      const finalPayload = chatCalls[1]?.[1] as {
+        state?: string;
+        errorMessage?: string;
+      };
+      expect(finalPayload.state).toBe("error");
+      expect(finalPayload.errorMessage).toContain("Connection error");
+
+      const sessionCalls = sessionChatCalls(nodeSendToSession);
+      expect(sessionCalls).toHaveLength(2);
+      const sessionFinal = sessionCalls[1]?.[2] as {
+        state?: string;
+      };
+      expect(sessionFinal.state).toBe("error");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("emits chat error final when a restarted retry run stalls without terminal lifecycle", () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(20_000);
+      const { broadcast, nodeSendToSession, chatRunState, handler } = createHarness();
+      chatRunState.registry.add("run-retry-stall", {
+        sessionKey: "session-retry-stall",
+        clientRunId: "client-retry-stall",
+      });
+
+      handler({
+        runId: "run-retry-stall",
+        seq: 1,
+        stream: "assistant",
+        ts: Date.now(),
+        data: { text: "Partial answer" },
+      });
+      handler({
+        runId: "run-retry-stall",
+        seq: 2,
+        stream: "lifecycle",
+        ts: Date.now(),
+        data: { phase: "error", error: "Connection error." },
+      });
+      handler({
+        runId: "run-retry-stall",
+        seq: 3,
+        stream: "lifecycle",
+        ts: Date.now(),
+        data: { phase: "start", startedAt: Date.now() },
+      });
+      handler({
+        runId: "run-retry-stall",
+        seq: 4,
+        stream: "tool",
+        ts: Date.now(),
+        data: { phase: "start", name: "exec", toolCallId: "retry-tool-1" },
+      });
+
+      expect(chatBroadcastCalls(broadcast)).toHaveLength(1);
+      vi.advanceTimersByTime(20_000);
+
+      const chatCalls = chatBroadcastCalls(broadcast);
+      expect(chatCalls).toHaveLength(2);
+      const finalPayload = chatCalls[1]?.[1] as {
+        state?: string;
+        errorMessage?: string;
+      };
+      expect(finalPayload.state).toBe("error");
+      expect(finalPayload.errorMessage).toContain("Connection error");
+      expect(finalPayload.errorMessage).toContain(
+        "Retry restarted but no terminal lifecycle event was received.",
+      );
+
+      const sessionCalls = sessionChatCalls(nodeSendToSession);
+      expect(sessionCalls).toHaveLength(2);
+      const sessionFinal = sessionCalls[1]?.[2] as { state?: string };
+      expect(sessionFinal.state).toBe("error");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not emit stalled retry error when the restarted run ends normally", () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(30_000);
+      const { broadcast, chatRunState, handler } = createHarness();
+      chatRunState.registry.add("run-retry-ok", {
+        sessionKey: "session-retry-ok",
+        clientRunId: "client-retry-ok",
+      });
+
+      handler({
+        runId: "run-retry-ok",
+        seq: 1,
+        stream: "assistant",
+        ts: Date.now(),
+        data: { text: "Recovered answer" },
+      });
+      handler({
+        runId: "run-retry-ok",
+        seq: 2,
+        stream: "lifecycle",
+        ts: Date.now(),
+        data: { phase: "error", error: "Connection error." },
+      });
+      handler({
+        runId: "run-retry-ok",
+        seq: 3,
+        stream: "lifecycle",
+        ts: Date.now(),
+        data: { phase: "start", startedAt: Date.now() },
+      });
+      handler({
+        runId: "run-retry-ok",
+        seq: 4,
+        stream: "assistant",
+        ts: Date.now(),
+        data: { text: "Recovered answer complete" },
+      });
+      handler({
+        runId: "run-retry-ok",
+        seq: 5,
+        stream: "lifecycle",
+        ts: Date.now(),
+        data: { phase: "end" },
+      });
+
+      vi.advanceTimersByTime(20_000);
+
+      const chatCalls = chatBroadcastCalls(broadcast);
+      expect(chatCalls).toHaveLength(2);
+      const finalPayload = chatCalls[1]?.[1] as { state?: string };
+      expect(finalPayload.state).toBe("final");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("routes tool events only to registered recipients when verbose is enabled", () => {
     const { broadcast, broadcastToConnIds, toolEventRecipients, handler } = createHarness({
       resolveSessionKeyForRun: () => "session-1",

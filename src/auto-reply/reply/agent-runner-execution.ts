@@ -546,6 +546,15 @@ export async function runAgentTurnWithFallback(params: {
         await new Promise<void>((resolve) => {
           setTimeout(resolve, TRANSIENT_HTTP_RETRY_DELAY_MS);
         });
+        // The lifecycle "error" event emitted during the failed attempt clears the run context.
+        // Re-register it so the retry's events have the correct sessionKey for routing.
+        if (params.sessionKey) {
+          registerAgentRunContext(runId, {
+            sessionKey: params.sessionKey,
+            verboseLevel: params.resolvedVerboseLevel,
+            isHeartbeat: params.isHeartbeat,
+          });
+        }
         continue;
       }
 
