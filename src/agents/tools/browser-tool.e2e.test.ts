@@ -272,6 +272,54 @@ describe("browser tool snapshot maxChars", () => {
     );
     expect(gatewayMocks.callGatewayTool).not.toHaveBeenCalled();
   });
+
+  it("prefers host target in sandbox when defaultProfile is explicitly host-oriented", async () => {
+    configMocks.loadConfig.mockReturnValue({
+      browser: {
+        defaultProfile: "hostchrome",
+      },
+    });
+    const tool = createBrowserTool({ sandboxBridgeUrl: "http://127.0.0.1:9999" });
+    await tool.execute?.("call-1", { action: "status" });
+
+    expect(browserClientMocks.browserStatus).toHaveBeenCalledWith(
+      undefined,
+      expect.objectContaining({ profile: undefined }),
+    );
+  });
+
+  it("accepts url alias for navigate with profile", async () => {
+    const tool = createBrowserTool();
+    await tool.execute?.("call-1", {
+      action: "navigate",
+      profile: "hostchrome",
+      url: "https://en.wikipedia.org/",
+    });
+
+    expect(browserActionsMocks.browserNavigate).toHaveBeenCalledWith(
+      undefined,
+      expect.objectContaining({
+        url: "https://en.wikipedia.org/",
+        profile: "hostchrome",
+      }),
+    );
+  });
+
+  it("prefers url when targetUrl is not a valid http(s) URL", async () => {
+    const tool = createBrowserTool();
+    await tool.execute?.("call-1", {
+      action: "navigate",
+      targetUrl: "hostchrome",
+      url: "https://en.wikipedia.org/",
+    });
+
+    expect(browserActionsMocks.browserNavigate).toHaveBeenCalledWith(
+      undefined,
+      expect.objectContaining({
+        url: "https://en.wikipedia.org/",
+      }),
+    );
+  });
 });
 
 describe("browser tool snapshot labels", () => {

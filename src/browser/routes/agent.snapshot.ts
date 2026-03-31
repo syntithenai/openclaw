@@ -65,13 +65,19 @@ export function registerBrowserAgentSnapshotRoutes(
       ctx,
       targetId,
       feature: "navigate",
-      run: async ({ cdpUrl, tab, pw }) => {
+      run: async ({ profileCtx, cdpUrl, tab, pw }) => {
         const result = await pw.navigateViaPlaywright({
           cdpUrl,
           targetId: tab.targetId,
           url,
           ...withBrowserNavigationPolicy(ctx.state().resolved.ssrfPolicy),
         });
+        // Keep UX intuitive: a successful navigate should surface the controlled tab.
+        try {
+          await profileCtx.focusTab(tab.targetId);
+        } catch {
+          // Navigation already succeeded; don't fail the request if focus is unavailable.
+        }
         res.json({ ok: true, targetId: tab.targetId, ...result });
       },
     });

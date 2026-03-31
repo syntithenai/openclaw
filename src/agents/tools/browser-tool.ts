@@ -20,7 +20,10 @@ import {
   browserTabs,
 } from "../../browser/client.js";
 import { resolveBrowserConfig } from "../../browser/config.js";
-import { DEFAULT_AI_SNAPSHOT_MAX_CHARS } from "../../browser/constants.js";
+import {
+  DEFAULT_AI_SNAPSHOT_MAX_CHARS,
+  DEFAULT_OPENCLAW_BROWSER_PROFILE_NAME,
+} from "../../browser/constants.js";
 import { DEFAULT_UPLOAD_DIR, resolvePathsWithinRoot } from "../../browser/paths.js";
 import { applyBrowserProxyPaths, persistBrowserProxyFiles } from "../../browser/proxy-files.js";
 import { loadConfig } from "../../config/config.js";
@@ -71,6 +74,15 @@ type BrowserNodeTarget = {
   nodeId: string;
   label?: string;
 };
+
+function isLikelyAbsoluteHttpUrl(value: string): boolean {
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
 
 function isBrowserNode(node: NodeListNode) {
   const caps = Array.isArray(node.caps) ? node.caps : [];
@@ -255,6 +267,18 @@ export function createBrowserTool(opts?: {
       if (!target && !requestedNode && profile === "chrome") {
         // Chrome extension relay takeover is a host Chrome feature; prefer host unless explicitly targeting a node.
         target = "host";
+      }
+
+      if (!target && !requestedNode && !profile && opts?.sandboxBridgeUrl) {
+        const cfg = loadConfig();
+        const configuredDefaultProfile = cfg.browser?.defaultProfile?.trim() ?? "";
+        if (
+          configuredDefaultProfile &&
+          configuredDefaultProfile !== DEFAULT_OPENCLAW_BROWSER_PROFILE_NAME
+        ) {
+          // User explicitly configured a host-oriented default profile; avoid silently routing to sandbox.
+          target = "host";
+        }
       }
 
       const nodeTarget = await resolveBrowserNodeTarget({
@@ -612,9 +636,21 @@ export function createBrowserTool(opts?: {
           });
         }
         case "navigate": {
-          const targetUrl = readStringParam(params, "targetUrl", {
-            required: true,
-          });
+          const rawTargetUrl = readStringParam(params, "targetUrl");
+          const rawUrl = readStringParam(params, "url");
+          const targetUrl = (() => {
+            if (rawTargetUrl && rawUrl) {
+              // Be tolerant of model mixups where profile is accidentally assigned to targetUrl.
+              if (!isLikelyAbsoluteHttpUrl(rawTargetUrl) && isLikelyAbsoluteHttpUrl(rawUrl)) {
+                return rawUrl;
+              }
+              return rawTargetUrl;
+            }
+            return rawTargetUrl ?? rawUrl ?? "";
+          })();
+          if (!targetUrl) {
+            throw new Error('Missing required parameter: "targetUrl" (or "url").');
+          }
           const targetId = readStringParam(params, "targetId");
           if (proxyRequest) {
             const result = await proxyRequest({
