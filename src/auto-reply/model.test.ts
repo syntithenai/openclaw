@@ -41,6 +41,19 @@ describe("extractModelDirective", () => {
       expect(result.hasDirective).toBe(false);
       expect(result.cleaned).toBe("hello world");
     });
+
+    it("extracts bare model command at message start", () => {
+      const result = extractModelDirective("model localfast");
+      expect(result.hasDirective).toBe(true);
+      expect(result.rawModel).toBe("localfast");
+      expect(result.cleaned).toBe("");
+    });
+
+    it("does not treat mid-sentence 'model' as a directive", () => {
+      const result = extractModelDirective("please use model localfast now");
+      expect(result.hasDirective).toBe(false);
+      expect(result.cleaned).toBe("please use model localfast now");
+    });
   });
 
   describe("alias shortcuts", () => {

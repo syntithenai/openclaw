@@ -62,6 +62,28 @@ function describeToolExecutionError(err: unknown): {
   return { message: String(err) };
 }
 
+function isExpectedReadFsError(toolName: string, err: unknown, message: string): boolean {
+  if (normalizeToolName(toolName) !== "read") {
+    return false;
+  }
+
+  const rawCode =
+    err && typeof err === "object" && "code" in err ? (err as { code?: unknown }).code : undefined;
+  const code =
+    typeof rawCode === "string"
+      ? rawCode
+      : typeof rawCode === "number" || typeof rawCode === "boolean" || typeof rawCode === "bigint"
+        ? String(rawCode)
+        : "";
+  if (code === "ENOENT" || code === "EISDIR" || code === "ENOTDIR") {
+    return true;
+  }
+
+  return /\b(ENOENT|EISDIR|ENOTDIR)\b|illegal operation on a directory, read|no such file or directory/i.test(
+    message,
+  );
+}
+
 function splitToolExecuteArgs(args: ToolExecuteArgsAny): {
   toolCallId: string;
   params: unknown;
@@ -154,7 +176,11 @@ export function toToolDefinitions(tools: AnyAgentTool[]): ToolDefinition[] {
           if (described.stack && described.stack !== described.message) {
             logDebug(`tools: ${normalizedName} failed stack:\n${described.stack}`);
           }
-          logError(`[tools] ${normalizedName} failed: ${described.message}`);
+          if (isExpectedReadFsError(normalizedName, err, described.message)) {
+            logDebug(`[tools] ${normalizedName} failed: ${described.message}`);
+          } else {
+            logError(`[tools] ${normalizedName} failed: ${described.message}`);
+          }
 
           const errorResult = jsonResult({
             status: "error",

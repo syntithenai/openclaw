@@ -286,9 +286,9 @@
 /* Override .field textarea min-height (180px) from components.css */
 .chat-compose .chat-compose__field textarea {
   width: 100%;
-  height: 40px;
   min-height: 40px;
   max-height: 150px;
+  field-sizing: content;
   padding: 9px 12px;
   border-radius: 8px;
   overflow-y: auto;

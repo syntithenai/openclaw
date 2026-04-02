@@ -13,13 +13,17 @@ export function extractModelDirective(
     return { cleaned: "", hasDirective: false };
   }
 
-  const modelMatch = body.match(
+  const slashModelMatch = body.match(
     /(?:^|\s)\/model(?=$|\s|:)\s*:?\s*([A-Za-z0-9_.:@-]+(?:\/[A-Za-z0-9_.:@-]+)*)?/i,
   );
+  const bareModelMatch = slashModelMatch
+    ? null
+    : body.match(/^\s*model(?=$|\s|:)\s*:?\s*([A-Za-z0-9_.:@-]+(?:\/[A-Za-z0-9_.:@-]+)*)?/i);
+  const modelMatch = slashModelMatch ?? bareModelMatch;
 
   const aliases = (options?.aliases ?? []).map((alias) => alias.trim()).filter(Boolean);
   const aliasMatch =
-    modelMatch || aliases.length === 0
+    slashModelMatch || bareModelMatch || aliases.length === 0
       ? null
       : body.match(
           new RegExp(

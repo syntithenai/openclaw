@@ -1,5 +1,4 @@
 import { html, nothing } from "lit";
-import { ref } from "lit/directives/ref.js";
 import { repeat } from "lit/directives/repeat.js";
 import {
   renderMessageGroup,
@@ -84,11 +83,6 @@ export type ChatProps = {
 
 const COMPACTION_TOAST_DURATION_MS = 5000;
 const FALLBACK_TOAST_DURATION_MS = 8000;
-
-function adjustTextareaHeight(el: HTMLTextAreaElement) {
-  el.style.height = "auto";
-  el.style.height = `${el.scrollHeight}px`;
-}
 
 function renderCompactionIndicator(status: CompactionIndicatorStatus | null | undefined) {
   if (!status) {
@@ -426,7 +420,6 @@ export function renderChat(props: ChatProps) {
           <label class="field chat-compose__field">
             <span>Message</span>
             <textarea
-              ${ref((el) => el && adjustTextareaHeight(el as HTMLTextAreaElement))}
               .value=${props.draft}
               dir=${detectTextDirection(props.draft)}
               ?disabled=${!props.connected}
@@ -450,7 +443,6 @@ export function renderChat(props: ChatProps) {
               }}
               @input=${(e: Event) => {
                 const target = e.target as HTMLTextAreaElement;
-                adjustTextareaHeight(target);
                 props.onDraftChange(target.value);
               }}
               @paste=${(e: ClipboardEvent) => handlePaste(e, props)}
