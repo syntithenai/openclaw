@@ -8,6 +8,7 @@ import {
   maybeHandleModelDirectiveInfo,
   resolveModelSelectionFromDirective,
 } from "./directive-handling.model.js";
+import { persistInlineDirectives } from "./directive-handling.persist.js";
 
 // Mock dependencies for directive handling persistence.
 vi.mock("../../agents/agent-scope.js", () => ({
@@ -207,5 +208,41 @@ describe("handleDirectiveOnly model persist behavior (fixes #1435)", () => {
     expect(result?.text ?? "").not.toContain("failed");
     expect(sessionEntry.thinkingLevel).toBe("off");
     expect(sessionStore["agent:main:dm:1"]?.thinkingLevel).toBe("off");
+  });
+});
+
+describe("persistInlineDirectives model behavior", () => {
+  it("does not persist model override for mixed inline model + prompt", async () => {
+    const directives = parseInlineDirectives("/model openai/gpt-4o what is the time");
+    const sessionEntry: SessionEntry = {
+      sessionId: "s-inline",
+      updatedAt: Date.now(),
+    };
+    const sessionStore = { "agent:main:dm:1": sessionEntry };
+
+    const result = await persistInlineDirectives({
+      directives,
+      effectiveModelDirective: directives.rawModelDirective,
+      cfg: baseConfig(),
+      sessionEntry,
+      sessionStore,
+      sessionKey: "agent:main:dm:1",
+      storePath: undefined,
+      elevatedEnabled: false,
+      elevatedAllowed: false,
+      defaultProvider: "anthropic",
+      defaultModel: "claude-opus-4-5",
+      aliasIndex: baseAliasIndex(),
+      allowedModelKeys: new Set(["openai/gpt-4o", "anthropic/claude-opus-4-5"]),
+      provider: "anthropic",
+      model: "claude-opus-4-5",
+      initialModelLabel: "anthropic/claude-opus-4-5",
+      formatModelSwitchEvent: (label) => `Switched to ${label}`,
+      agentCfg: {},
+    });
+
+    expect(sessionEntry.modelOverride).toBeUndefined();
+    expect(result.provider).toBe("anthropic");
+    expect(result.model).toBe("claude-opus-4-5");
   });
 });

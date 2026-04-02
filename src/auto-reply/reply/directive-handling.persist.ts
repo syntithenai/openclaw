@@ -135,7 +135,9 @@ export async function persistInlineDirectives(params: {
 
     const modelDirective =
       directives.hasModelDirective && params.effectiveModelDirective
-        ? params.effectiveModelDirective
+        ? directives.cleaned.trim().length === 0
+          ? params.effectiveModelDirective
+          : undefined
         : undefined;
     if (modelDirective) {
       const resolved = resolveModelRefFromString({

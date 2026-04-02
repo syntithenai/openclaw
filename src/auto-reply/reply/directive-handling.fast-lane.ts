@@ -1,7 +1,10 @@
+import { resolveAgentDir, resolveSessionAgentId } from "../../agents/agent-scope.js";
 import type { ReplyPayload } from "../types.js";
 import { handleDirectiveOnly } from "./directive-handling.impl.js";
 import { resolveCurrentDirectiveLevels } from "./directive-handling.levels.js";
+import { resolveModelSelectionFromDirective } from "./directive-handling.model.js";
 import type { ApplyInlineDirectivesFastLaneParams } from "./directive-handling.params.js";
+import { parseInlineDirectives } from "./directive-handling.parse.js";
 import { isDirectiveOnly } from "./directive-handling.parse.js";
 
 export async function applyInlineDirectivesFastLane(
@@ -55,9 +58,13 @@ export async function applyInlineDirectivesFastLane(
       resolveDefaultThinkingLevel: () => modelState.resolveDefaultThinkingLevel(),
     });
 
+  const directivesForAck = directives.hasModelDirective
+    ? parseInlineDirectives(directives.cleaned)
+    : directives;
+
   const directiveAck = await handleDirectiveOnly({
     cfg,
-    directives,
+    directives: directivesForAck,
     sessionEntry,
     sessionStore,
     sessionKey,
@@ -82,11 +89,32 @@ export async function applyInlineDirectivesFastLane(
     currentElevatedLevel,
   });
 
-  if (sessionEntry?.providerOverride) {
-    provider = sessionEntry.providerOverride;
-  }
-  if (sessionEntry?.modelOverride) {
-    model = sessionEntry.modelOverride;
+  // For mixed messages, treat /model as one-shot: apply to this turn only.
+  if (directives.hasModelDirective && directives.rawModelDirective) {
+    const activeAgentId = resolveSessionAgentId({ sessionKey, config: cfg });
+    const agentDir = resolveAgentDir(cfg, activeAgentId);
+    const resolved = resolveModelSelectionFromDirective({
+      directives,
+      cfg,
+      agentDir,
+      defaultProvider,
+      defaultModel,
+      aliasIndex,
+      allowedModelKeys,
+      allowedModelCatalog,
+      provider,
+    });
+    if (!resolved.errorText && resolved.modelSelection) {
+      provider = resolved.modelSelection.provider;
+      model = resolved.modelSelection.model;
+    }
+  } else {
+    if (sessionEntry?.providerOverride) {
+      provider = sessionEntry.providerOverride;
+    }
+    if (sessionEntry?.modelOverride) {
+      model = sessionEntry.modelOverride;
+    }
   }
 
   return { directiveAck, provider, model };
